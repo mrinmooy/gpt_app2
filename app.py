@@ -1,33 +1,25 @@
 import streamlit as st
-import requests
-import json
-import sounddevice as sd
-import numpy as np
+import speech_recognition as sr
 
-st.title("Real-time Speech-to-Text Transcription")
+def main():
+    st.title("Real-time Speech-to-Text Transcription")
 
-api_token = st.secrets["api_token"]
-API_URL = "https://api-inference.huggingface.co/models/facebook/wav2vec2-base-960h"
+    r = sr.Recognizer()
 
-headers = {"Authorization": f"Bearer {api_token}"}
+    with sr.Microphone() as source:
+        button_start = st.button("🎙️")
 
-# Initialize variables
-text_transcript = ""
+        if button_start:
+            st.info("Listening... Say something!")
+            audio = r.listen(source)
 
-# Callback function to process audio data
-def process_audio(indata, frames, time, status):
-    global text_transcript
-    audio_data = np.ravel(indata)
-    response = requests.request("POST", API_URL, headers=headers, data=audio_data)
-    data = json.loads(response.content.decode("utf-8"))
-    text_value = data["text"]
-    text_transcript += text_value
+            try:
+                text = r.recognize_google(audio)
+                st.success(f"You said: {text}")
+            except sr.UnknownValueError:
+                st.warning("Sorry, I could not understand what you said.")
+            except sr.RequestError as e:
+                st.error(f"Request error: {e}")
 
-# Main app logic
-if st.button("Start Transcription"):
-    with sd.InputStream(callback=process_audio):
-        st.write("Listening...")
-        st.stop()
-
-st.write("Transcription:")
-st.write(text_transcript)
+if __name__ == '__main__':
+    main()
